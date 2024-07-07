@@ -37,6 +37,9 @@ object isLogic {
       "vxor.vi",
       "vxor.vv",
       "vxor.vx",
+      // rv_zvbb
+      "vandn.vv",
+      "vandn.vx",
     )
     allMatched.contains(t1DecodePattern.instruction.name)
   }

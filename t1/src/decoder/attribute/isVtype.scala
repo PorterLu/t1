@@ -181,6 +181,8 @@ object isVtype {
       "vzext.vf2",
       "vzext.vf4",
       "vzext.vf8",
+      // rv_zvbb
+      "vandn.vv",
     )
     allMatched.contains(t1DecodePattern.instruction.name)
   }

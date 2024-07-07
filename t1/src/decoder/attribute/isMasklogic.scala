@@ -31,6 +31,9 @@ object isMasklogic {
       "vmsof.m",
       "vmxnor.mm",
       "vmxor.mm",
+      // rv_zvbb
+      "vandn.vv",
+      "vandn.vx",
     )
     allMatched.contains(t1DecodePattern.instruction.name)
   }

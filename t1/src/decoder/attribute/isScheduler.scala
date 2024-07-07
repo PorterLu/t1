@@ -260,6 +260,9 @@ object isScheduler {
       "vxor.vi",
       "vxor.vv",
       "vxor.vx",
+      // rv_zvbb
+      "vandn.vv",
+      "vandn.vx",
     )
     allMatched.contains(t1DecodePattern.instruction.name)
   }
@@ -274,5 +277,5 @@ object isScheduler {
 }
 
 case class isScheduler(value: TriState) extends BooleanDecodeAttribute {
-  override val description: String = "lane will send request to Sequencer and wait ack from Sequencer. */ "
+  override val description: String = " lane will send request to Sequencer and wait ack from Sequencer.\n instructions that will communicate with T1 top module.*/ "
 }

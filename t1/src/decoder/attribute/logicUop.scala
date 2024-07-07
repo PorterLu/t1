@@ -63,6 +63,9 @@ object LogicUop {
   def t4(t1DecodePattern: T1DecodePattern): Boolean = {
     val allMatched: Seq[String] = Seq(
       "vmandn.mm",
+      // rv_zvbb
+      "vandn.vv",
+      "vandn.vx",
     )
     allMatched.contains(t1DecodePattern.instruction.name)
   }

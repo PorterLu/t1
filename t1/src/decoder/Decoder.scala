@@ -13,7 +13,7 @@ import org.chipsalliance.t1.rtl.decoder.attribute._
 object DecoderParam {
   implicit def rwP: upickle.default.ReadWriter[DecoderParam] = upickle.default.macroRW
 }
-case class DecoderParam(fpuEnable: Boolean, allInstructions: Seq[Instruction])
+case class DecoderParam(fpuEnable: Boolean, zvbbEnable: Boolean, allInstructions: Seq[Instruction])
 
 trait T1DecodeFiled[D <: Data] extends DecodeField[T1DecodePattern, D] with FieldName
 
@@ -398,6 +398,10 @@ object Decoder {
         floatMul,
         orderReduce
       )
+    else Seq()
+  } ++ {
+    if (param.zvbbEnable)
+      Seq()
     else Seq()
   }
   def allDecodePattern(param: DecoderParam): Seq[T1DecodePattern] = param.allInstructions.map(T1DecodePattern(_, param)).toSeq.sortBy(_.instruction.name)

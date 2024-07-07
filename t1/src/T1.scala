@@ -121,7 +121,12 @@ case class T1Parameter(
 
   val allInstructions: Seq[Instruction] = {
     org.chipsalliance.rvdecoderdb.instructions(org.chipsalliance.rvdecoderdb.extractResource(getClass.getClassLoader))
-      .filter(instruction => instruction.instructionSet.name == "rv_v")++
+      .filter{
+        instruction => instruction.instructionSet.name match {
+          case "rv_v" => true
+          case "rv_zvbb" => if (zvbbEnable) true else false
+          case _ => false
+      }} ++
       t1customInstructions.map(_.instruction)
   }.toSeq.sortBy(_.instructionSet.name).filter{
     insn => insn.name match {
@@ -146,6 +151,9 @@ case class T1Parameter(
 
   /** does t1 has floating datapath? */
   val fpuEnable: Boolean = extensions.contains("Zve32f")
+
+  /** support of zvbb */
+  lazy val zvbbEnable: Boolean = extensions.contains("Zvbb")
 
   /** how many chaining does T1 support, this is not a parameter yet. */
   val chainingSize: Int = 4
@@ -227,7 +235,7 @@ case class T1Parameter(
   // and the values are their respective delays.
   val crossLaneConnectCycles: Seq[Seq[Int]] = Seq.tabulate(laneNumber)(_ => Seq(1, 1))
 
-  val decoderParam: DecoderParam = DecoderParam(fpuEnable, allInstructions)
+  val decoderParam: DecoderParam = DecoderParam(fpuEnable, zvbbEnable, allInstructions)
 
   /** parameter for TileLink. */
   val tlParam: TLBundleParameter = TLBundleParameter(
