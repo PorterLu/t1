@@ -183,6 +183,15 @@ object isVtype {
       "vzext.vf8",
       // rv_zvbb
       "vandn.vv",
+      "vandn.vx",
+      "vrol.vv",
+      "vrol.vx",
+      "vror.vv",
+      "vror.vx",
+      "vror.vi",
+      "vwsll.vv",
+      "vwsll.vx",
+      "vwsll.vi",
     )
     allMatched.contains(t1DecodePattern.instruction.name)
   }

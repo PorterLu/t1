@@ -110,6 +110,7 @@ case class T1DecodePattern(instruction: Instruction, param: DecoderParam) extend
   def fpExecutionType: FpExecutionType.Type = attribute.FpExecutionType(this)
   def topUop: TopUop = attribute.TopUop(this)
   def decoderUop: DecoderUop = attribute.DecoderUop(this)
+  def zvbbExecutionType: zvbbExecutionType.Type = attribute.ZvbbExecutionType(this)
 
   private def documentation: String = InstructionDocumentation(instruction, param).toString
 

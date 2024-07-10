@@ -40,6 +40,10 @@ trait T1fpExecutionTypeUopField extends T1DecodeFiled[UInt] with FieldName {
   def chiselType: UInt = UInt(2.W)
 }
 
+trait T1zvbbExecutionTypeUopField extends T1DecodeFiled[UInt] with FieldName {
+  def chiselType: UInt = UInt(2.W)
+}
+
 object Decoder {
   object logic extends BoolField {
     override def getTriState(pattern: T1DecodePattern): TriState = pattern.isLogic.value
@@ -341,6 +345,15 @@ object Decoder {
     }
   }
 
+  object zvbbExecutionType extends T1zvbbExecutionTypeUopField {
+    override def genTable(pattern: T1DecodePattern): BitPat = pattern.zvbbExecutionType match {
+      case ZvbbExecutionType.Brev => BitPat("b00")
+      case ZvbbExecutionType.Brev8 => BitPat("b01")
+      case ZvbbExecutionType.Rev8 => BitPat("b10")
+      case ZvbbExecutionType.Nil => BitPat.dontCare(2)
+    }
+  }
+
   def allFields(param: DecoderParam): Seq[T1DecodeFiled[_ >: Bool <: UInt]] = Seq(
     logic,
     adder,
@@ -401,7 +414,9 @@ object Decoder {
     else Seq()
   } ++ {
     if (param.zvbbEnable)
-      Seq()
+      Seq(
+        zvbbExecutionType,
+      )
     else Seq()
   }
   def allDecodePattern(param: DecoderParam): Seq[T1DecodePattern] = param.allInstructions.map(T1DecodePattern(_, param)).toSeq.sortBy(_.instruction.name)
