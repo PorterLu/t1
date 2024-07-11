@@ -123,7 +123,9 @@ object Main {
             ),
             Seq(0, 1, 2, 3))),
         floatModuleParameters =
-          Seq((SerializableModuleGenerator(classOf[LaneFloat], LaneFloatParam(32, 3)), Seq(0, 1, 2, 3)))
+          Seq((SerializableModuleGenerator(classOf[LaneFloat], LaneFloatParam(32, 3)), Seq(0, 1, 2, 3))),
+        zvbbModuleParameters =
+          Seq((SerializableModuleGenerator(classOf[LaneZvbb], LaneZvbbParam(32, 3)), Seq(0, 1, 2, 3)))
       )
     )
     if (doEmit) param.emit(targetFile)
