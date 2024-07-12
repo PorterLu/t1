@@ -1,39 +1,65 @@
 { lib
+, fetchFromGitHub
 , linkerScript
 , makeBuilder
-, findAndBuild
 , t1main
-, makeEmuResult
+, isFp
 }:
 
 let
-  include = ./_include;
+  src = fetchFromGitHub {
+    owner = "camel-cdr";
+    repo = "rvv-bench";
+    rev = "5dc20c3596b3aa8412804e2d169d1b175bae927a";
+    hash = "sha256-5A079sl4g7FIWgCYykLgTZXrmyfIblyXtxeh1AwqKiU=";
+    fetchSubmodules = true;
+  };
+
+  nonFpCases = [
+    "ascii_to_utf16"
+    "ascii_to_utf32"
+    "byteswap"
+    "chacha20"
+    "memcpy"
+    "memset"
+    "mergelines"
+    "poly1305"
+    "strlen"
+    "utf8_count"
+  ];
+
+  fpCases = [
+    "mandelbrot"
+  ];
+
+  cases = nonFpCases ++ (lib.optionals isFp fpCases);
+
   builder = makeBuilder { casePrefix = "rvv_bench"; };
-  build = { caseName, sourcePath }:
+  build = caseName:
     let
       drv = builder
         {
-          inherit caseName;
+          inherit caseName src;
 
-          src = sourcePath;
+          isFp = lib.elem caseName fpCases;
 
-          isFp = lib.pathExists (lib.path.append sourcePath "isFp");
+          patches = [ ./t1_runtime.patch ];
 
           buildPhase = ''
             runHook preBuild
+            pushd bench >/dev/null
 
-            $CC -E -DINC=$PWD/${caseName}.S -E ${include}/template.S -o functions.S
-            $CC -I${include} ${caseName}.c -T${linkerScript} ${t1main} functions.S -o $pname.elf
+            $CC -E -DINC=$PWD/${caseName}.S template.S -E -o functions.S
+            $CC ${caseName}.c -T${linkerScript} ${t1main} functions.S -o ../$pname.elf
 
+            popd >/dev/null
             runHook postBuild
           '';
 
-          meta.description = "test case '${caseName}', written in C intrinsic";
-
-          passthru.emu-result = makeEmuResult drv;
+          meta.description = "test case '${caseName}' from rvv-bench";
         };
     in
     drv;
 in
-findAndBuild ./. build
+lib.genAttrs cases build
 

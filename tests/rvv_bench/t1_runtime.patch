@@ -1,0 +1,29 @@
+diff --git a/nolibc.h b/nolibc.h
+index 94d4235..06f2c0f 100644
+--- a/nolibc.h
++++ b/nolibc.h
+@@ -64,7 +64,7 @@ memread(void *ptr, size_t len)
+ 	return fread(ptr, 1, len, stdin);
+ }
+ #ifndef ENABLE_RDCYCLE_HACK
+-int main(void) {
++int test(void) {
+ 	int x = nolibc_main();
+ 	print_flush();
+ 	exit(x);
+@@ -158,13 +158,8 @@ void _start(void) {
+ static inline ux
+ rv_cycles(void)
+ {
+-	ux cycle;
+-#ifdef READ_MCYCLE
+-	__asm volatile ("csrr %0, mcycle" : "=r"(cycle));
+-#else
+-	__asm volatile ("csrr %0, cycle" : "=r"(cycle));
+-#endif
+-	return cycle;
++	// TODO: support cycle
++	return 0;
+ }
+ 
+ 
