@@ -293,9 +293,6 @@ object isSreadvd {
       "vzext.vf2",
       "vzext.vf4",
       "vzext.vf8",
-      // rv_zvbb
-      "vandn.vv",
-      "vandn.vx",
     )
     allMatched.contains(t1DecodePattern.instruction.name)
   }

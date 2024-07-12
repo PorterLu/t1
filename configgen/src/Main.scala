@@ -203,7 +203,8 @@ object Main {
               OtherUnitParam(32, log2Ceil(vLen) + 1, log2Ceil(vLen * 8 / dLen), log2Ceil(dLen / 32), 4, 1)
             ),
             Seq(0, 1, 2, 3))),
-        floatModuleParameters = Seq()
+        floatModuleParameters = Seq(),
+        zvbbModuleParameters = Seq() // TODO
       )
     )
     if (doEmit) param.emit(targetFile)
@@ -283,7 +284,8 @@ object Main {
               OtherUnitParam(32, log2Ceil(vLen) + 1, log2Ceil(vLen * 8 / dLen), log2Ceil(dLen / 32), 4, 1)
             ),
             Seq(0, 1, 2, 3))),
-        floatModuleParameters = Seq()
+        floatModuleParameters = Seq(),
+        zvbbModuleParameters = Seq() // TODO
       )
     )
     if (doEmit) param.emit(targetFile)

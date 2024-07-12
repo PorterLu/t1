@@ -33,6 +33,41 @@ object ZvbbExecutionType {
       allMatched.contains(t1DecodePattern.instruction.name)
     }
   }
+  case object CLZ extends Type {
+    def apply(t1DecodePattern: T1DecodePattern): Boolean = {
+      val allMatched = if(isZvbb.y(t1DecodePattern)) Seq(
+        "vclz.v"
+      ) else Seq()
+      allMatched.contains(t1DecodePattern.instruction.name)
+    }
+  }
+  case object CTZ extends Type {
+    def apply(t1DecodePattern: T1DecodePattern): Boolean = {
+      val allMatched = if(isZvbb.y(t1DecodePattern)) Seq(
+        "vctz.v"
+      ) else Seq()
+      allMatched.contains(t1DecodePattern.instruction.name)
+    }
+  }
+  case object ROL extends Type {
+    def apply(t1DecodePattern: T1DecodePattern): Boolean = {
+      val allMatched = if(isZvbb.y(t1DecodePattern)) Seq(
+        "vrol.vv",
+        "vrol.vx",
+      ) else Seq()
+      allMatched.contains(t1DecodePattern.instruction.name)
+    }
+  }
+  case object ROR extends Type {
+    def apply(t1DecodePattern: T1DecodePattern): Boolean = {
+      val allMatched = if(isZvbb.y(t1DecodePattern)) Seq(
+        "vror.vv",
+        "vror.vx",
+        "vror.vi",
+      ) else Seq()
+      allMatched.contains(t1DecodePattern.instruction.name)
+    }
+  }
   case object Nil extends Type {
     def apply(t1DecodePattern: T1DecodePattern): Boolean = {
       require(requirement = false, "unreachable")
@@ -40,7 +75,7 @@ object ZvbbExecutionType {
     }
   }
   def apply(t1DecodePattern: T1DecodePattern): Type = {
-    val tpe = Seq(Brev, Brev8, Rev8).filter(tpe =>
+    val tpe = Seq(Brev, Brev8, Rev8, CLZ, CTZ, ROL, ROR).filter(tpe =>
       tpe(t1DecodePattern)
     )
     require(tpe.size <= 1)

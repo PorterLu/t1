@@ -20,6 +20,13 @@ object isZvbb {
       "vbrev.v",
       "vbrev8.v",
       "vrev8.v",
+      "vclz.v",
+      "vctz.v",
+      "vrol.vv",
+      "vrol.vx",
+      "vror.vv",
+      "vror.vx",
+      "vror.vi",
     ) else Seq()
     allMatched.contains(t1DecodePattern.instruction.name)
   }

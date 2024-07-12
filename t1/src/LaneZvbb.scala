@@ -22,8 +22,8 @@ case class LaneZvbbParam(datapathWidth: Int, latency: Int) extends VFUParameter 
 }
 
 class LaneZvbbRequest(datapathWidth: Int) extends VFUPipeBundle {
-  val src   = Vec(3, UInt(datapathWidth.W)) // TODO: what is the order of vs1, vs2, vd
-  val opcode = UInt(3.W)
+  val src   = Vec(3, UInt(datapathWidth.W))
+  val opcode = UInt(4.W)
 }
 
 class LaneZvbbResponse(datapathWidth: Int)  extends VFUPipeBundle {
@@ -37,6 +37,7 @@ class LaneZvbb(val parameter: LaneZvbbParam)
   val request : LaneZvbbRequest  = connectIO(response).asTypeOf(parameter.inputBundle)
 
   val zvbbSrc: UInt = request.src(0) // vs2
+  val zvbbRs: UInt = request.src(1) // vs1 or rs1
   val zvbbBRev = UInt(parameter.datapathWidth.W) // element's bit reverse
   for (i <- 0 until parameter.datapathWidth) {
     zvbbBRev:= zvbbBRev ## zvbbSrc(i)
@@ -51,11 +52,28 @@ class LaneZvbb(val parameter: LaneZvbbParam)
   for (i <- 0 until parameter.datapathWidth/8) {
     zvbbRev8:= zvbbRev8 ## zvbbSrc(parameter.datapathWidth - i * 8 - 1, parameter.datapathWidth - i * 8 - 1 - 8)
   }
-  response.data := Mux(request.opcode(0), zvbbBRev,
-    Mux(request.opcode(1), zvbbBRev8,
-      Mux(request.opcode(2), zvbbRev8, 
-        zvbbSrc
-      )
+  val zvbbCLZ = UInt(parameter.datapathWidth.W)
+  for (i <- 0 until parameter.datapathWidth) {
+    when(zvbbSrc(parameter.datapathWidth-i-1) === 1.U) {
+      zvbbCLZ := zvbbCLZ + 1.U
+    }
+  }
+  val zvbbCTZ = UInt(parameter.datapathWidth.W)
+  for (i <- 0 until parameter.datapathWidth) {
+    when(zvbbSrc(i) === 1.U) {
+      zvbbCTZ := zvbbCTZ + 1.U
+    }
+  }
+  val zvbbROL = zvbbSrc.rotateLeft(zvbbRs)
+  val zvbbROR = zvbbSrc.rotateRight(zvbbRs)
+  response.data := Mux1H(UIntToOH(request.opcode), Seq(
+      zvbbBRev,
+      zvbbBRev8,
+      zvbbRev8,
+      zvbbCLZ,
+      zvbbCTZ,
+      zvbbROL,
+      zvbbROR,
     )
   )
 }
