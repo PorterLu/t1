@@ -135,7 +135,7 @@ case class T1Parameter(
     }
   }
 
-  require(extensions.forall(Seq("Zve32x", "Zve32f").contains), "unsupported extension.")
+  require(extensions.forall(Seq("Zve32x", "Zve32f", "Zvbb").contains), "unsupported extension.")
   // TODO: require bank not overlap
   /** xLen of T1, we currently only support 32. */
   val xLen: Int = 32

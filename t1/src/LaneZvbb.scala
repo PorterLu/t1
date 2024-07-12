@@ -38,20 +38,11 @@ class LaneZvbb(val parameter: LaneZvbbParam)
 
   val zvbbSrc: UInt = request.src(0) // vs2
   val zvbbRs: UInt = request.src(1) // vs1 or rs1
-  val zvbbBRev = UInt(parameter.datapathWidth.W) // element's bit reverse
-  for (i <- 0 until parameter.datapathWidth) {
-    zvbbBRev:= zvbbBRev ## zvbbSrc(i)
-  }
-  val zvbbBRev8 = UInt(parameter.datapathWidth.W) // byte's bit reverse
-  for (i <- 0 until parameter.datapathWidth/8) {
-    for (j <- 0 until 8) {
-      zvbbBRev8 := zvbbBRev8 ## zvbbSrc(i * 8 + j)
-    }
-  }
-  val zvbbRev8 = UInt(parameter.datapathWidth.W) // element's byte reverse
-  for (i <- 0 until parameter.datapathWidth/8) {
-    zvbbRev8:= zvbbRev8 ## zvbbSrc(parameter.datapathWidth - i * 8 - 1, parameter.datapathWidth - i * 8 - 1 - 8)
-  }
+
+  val zvbbBRev  = VecInit(zvbbSrc(parameter.datapathWidth-1, 0).asBools.reverse).asUInt // element's bit reverse
+  val zvbbBRev8 = VecInit(zvbbSrc(parameter.datapathWidth-1, 0).asBools.grouped(8).map(s => VecInit(s.reverse)).toSeq).asUInt // byte's bit reverse
+  val zvbbRev8  = VecInit(zvbbSrc(parameter.datapathWidth-1, 0).asBools.grouped(8).map(s => VecInit(s)).toSeq.reverse).asUInt // element's byte reverse
+
   val zvbbCLZ = UInt(parameter.datapathWidth.W)
   for (i <- 0 until parameter.datapathWidth) {
     when(zvbbSrc(parameter.datapathWidth-i-1) === 1.U) {

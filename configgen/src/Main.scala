@@ -124,6 +124,79 @@ object Main {
             Seq(0, 1, 2, 3))),
         floatModuleParameters =
           Seq((SerializableModuleGenerator(classOf[LaneFloat], LaneFloatParam(32, 3)), Seq(0, 1, 2, 3))),
+        zvbbModuleParameters = Seq()
+      )
+    )
+    if (doEmit) param.emit(targetFile)
+    param
+  }
+
+  // DLEN256 VLEN256;   FP; VRF p0rw,p1rw bank1; LSU bank8  beatbyte 8; Zvbb
+  @main def psyduck(
+    @arg(name = "target-file", short = 't') targetFile:             os.Path,
+    @arg(name = "emit", short = 'e', doc = "emit config") doEmit: Boolean = true
+  ): T1Parameter = {
+    val vLen = 512
+    val dLen = 256
+    val param = T1Parameter(
+      vLen,
+      dLen,
+      extensions = Seq("Zve32f", "Zvbb"),
+      t1customInstructions = Nil,
+      lsuBankParameters =
+        // scalar bank 0-1G
+        Seq(
+          BitSet(BitPat("b00??????????????????????????????"))
+        ).map(bs => LSUBankParameter("scalar", bs, 8, true)) ++
+          // ddr bank 1G-3G 512M/bank
+          Seq(
+            BitSet(BitPat("b01???????????????????????00?????"), BitPat("b10???????????????????????00?????")),
+            BitSet(BitPat("b01???????????????????????01?????"), BitPat("b10???????????????????????01?????")),
+            BitSet(BitPat("b01???????????????????????10?????"), BitPat("b10???????????????????????10?????")),
+            BitSet(BitPat("b01???????????????????????11?????"), BitPat("b10???????????????????????11?????"))
+          ).zipWithIndex.map { case (bs: BitSet, idx: Int) => LSUBankParameter(s"ddrBank$idx", bs, 8, false) } ++
+          // sRam bank 3G+ 256K/bank, 8banks
+          Seq(
+            BitSet(BitPat("b11000000000?????????????000?????")),
+            BitSet(BitPat("b11000000000?????????????001?????")),
+            BitSet(BitPat("b11000000000?????????????010?????")),
+            BitSet(BitPat("b11000000000?????????????011?????")),
+            BitSet(BitPat("b11000000000?????????????100?????")),
+            BitSet(BitPat("b11000000000?????????????101?????")),
+            BitSet(BitPat("b11000000000?????????????110?????")),
+            BitSet(BitPat("b11000000000?????????????111?????"))
+          ).zipWithIndex.map { case (bs: BitSet, idx: Int) => LSUBankParameter(s"sramBank$idx", bs, 8, false) },
+      vrfBankSize = 1,
+      vrfRamType = RamType.p0rwp1rw,
+      vfuInstantiateParameter = VFUInstantiateParameter(
+        slotCount = 4,
+        logicModuleParameters = Seq(
+          (SerializableModuleGenerator(classOf[MaskedLogic], LogicParam(32, 1)), Seq(0, 1, 2, 3))
+        ),
+        aluModuleParameters = Seq(
+          (SerializableModuleGenerator(classOf[LaneAdder], LaneAdderParam(32, 1)), Seq(0)),
+          (SerializableModuleGenerator(classOf[LaneAdder], LaneAdderParam(32, 1)), Seq(1)),
+          (SerializableModuleGenerator(classOf[LaneAdder], LaneAdderParam(32, 1)), Seq(2)),
+          (SerializableModuleGenerator(classOf[LaneAdder], LaneAdderParam(32, 1)), Seq(3))
+        ),
+        shifterModuleParameters = Seq(
+          (SerializableModuleGenerator(classOf[LaneShifter], LaneShifterParameter(32, 1)), Seq(0, 1, 2, 3))
+        ),
+        mulModuleParameters = Seq(
+          (SerializableModuleGenerator(classOf[LaneMul], LaneMulParam(32, 2)), Seq(0, 1, 2, 3))
+        ),
+        divModuleParameters = Seq(),
+        divfpModuleParameters =
+          Seq((SerializableModuleGenerator(classOf[LaneDivFP], LaneDivFPParam(32, 1)), Seq(0, 1, 2, 3))),
+        otherModuleParameters =
+          Seq((
+            SerializableModuleGenerator(
+              classOf[OtherUnit],
+              OtherUnitParam(32, log2Ceil(vLen) + 1, log2Ceil(vLen * 8 / dLen), log2Ceil(dLen / 32), 4, 1)
+            ),
+            Seq(0, 1, 2, 3))),
+        floatModuleParameters =
+          Seq((SerializableModuleGenerator(classOf[LaneFloat], LaneFloatParam(32, 3)), Seq(0, 1, 2, 3))),
         zvbbModuleParameters =
           Seq((SerializableModuleGenerator(classOf[LaneZvbb], LaneZvbbParam(32, 3)), Seq(0, 1, 2, 3)))
       )

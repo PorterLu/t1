@@ -40,10 +40,6 @@ trait T1fpExecutionTypeUopField extends T1DecodeFiled[UInt] with FieldName {
   def chiselType: UInt = UInt(2.W)
 }
 
-trait T1zvbbExecutionTypeUopField extends T1DecodeFiled[UInt] with FieldName {
-  def chiselType: UInt = UInt(4.W)
-}
-
 object Decoder {
   object logic extends BoolField {
     override def getTriState(pattern: T1DecodePattern): TriState = pattern.isLogic.value
@@ -336,6 +332,17 @@ object Decoder {
           case _: zeroUop0.type =>  BitPat("b0000")
           case _ => BitPat.dontCare(4)
         }
+      case zvbbCase: ZvbbUOPType =>
+        zvbbCase match {
+          case _: zvbbUop0.type => BitPat("b0000")
+          case _: zvbbUop1.type => BitPat("b0001")
+          case _: zvbbUop2.type => BitPat("b0010")
+          case _: zvbbUop3.type => BitPat("b0011")
+          case _: zvbbUop4.type => BitPat("b0100")
+          case _: zvbbUop5.type => BitPat("b0101")
+          case _: zvbbUop6.type => BitPat("b0110")
+          case _ => BitPat.dontCare(4)
+        }
       case _ => BitPat.dontCare(4)
     }
   }
@@ -349,18 +356,6 @@ object Decoder {
     }
   }
 
-  object zvbbExecutionType extends T1zvbbExecutionTypeUopField {
-    override def genTable(pattern: T1DecodePattern): BitPat = pattern.zvbbExecutionType match {
-      case ZvbbExecutionType.Brev  => BitPat("b0000")
-      case ZvbbExecutionType.Brev8 => BitPat("b0001")
-      case ZvbbExecutionType.Rev8  => BitPat("b0010")
-      case ZvbbExecutionType.CLZ   => BitPat("b0011")
-      case ZvbbExecutionType.CTZ   => BitPat("b0100")
-      case ZvbbExecutionType.ROL   => BitPat("b0101")
-      case ZvbbExecutionType.ROR   => BitPat("b0110")
-      case ZvbbExecutionType.Nil   => BitPat.dontCare(4)
-    }
-  }
 
   def allFields(param: DecoderParam): Seq[T1DecodeFiled[_ >: Bool <: UInt]] = Seq(
     logic,
@@ -424,7 +419,6 @@ object Decoder {
     if (param.zvbbEnable)
       Seq(
         zvbb,
-        zvbbExecutionType,
       )
     else Seq()
   }
