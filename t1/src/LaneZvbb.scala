@@ -16,6 +16,7 @@ object LaneZvbbParam {
 
 case class LaneZvbbParam(datapathWidth: Int, latency: Int) extends VFUParameter with SerializableModuleParameter {
   val inputBundle = new LaneZvbbRequest(datapathWidth)
+  val decodeField: BoolField = Decoder.zvbb
   val outputBundle = new LaneZvbbResponse(datapathWidth)
   override val NeedSplit: Boolean = false
 }
@@ -52,7 +53,7 @@ class LaneZvbb(val parameter: LaneZvbbParam)
   }
   response.data := Mux(request.opcode(0), zvbbBRev,
     Mux(request.opcode(1), zvbbBRev8,
-      Mux(reques.opcode(2), zvbbRev8, 
+      Mux(request.opcode(2), zvbbRev8, 
         zvbbSrc
       )
     )

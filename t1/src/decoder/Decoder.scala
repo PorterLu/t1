@@ -225,6 +225,10 @@ object Decoder {
     override def getTriState(pattern: T1DecodePattern): TriState = pattern.isOrderreduce.value
   }
 
+  object zvbb extends BoolField {
+    override def getTriState(pattern: T1DecodePattern): TriState = pattern.isZvbb.value
+  }
+
   object topUop extends T1TopUopField {
     override def genTable(pattern: T1DecodePattern): BitPat = pattern.topUop.value match {
       case _: TopT0.type => BitPat("b000")
@@ -415,6 +419,7 @@ object Decoder {
   } ++ {
     if (param.zvbbEnable)
       Seq(
+        zvbb,
         zvbbExecutionType,
       )
     else Seq()

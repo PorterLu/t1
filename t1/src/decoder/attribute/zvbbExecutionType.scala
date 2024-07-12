@@ -11,29 +11,29 @@ object ZvbbExecutionType {
   }
   case object Brev extends Type {
     def apply(t1DecodePattern: T1DecodePattern): Boolean = {
-      val allMatched = if(t1DecodePattern.param.zvbbEnable) Seq(
+      val allMatched = if(isZvbb.y(t1DecodePattern)) Seq(
         "vbrev.v"
-      )
+      ) else Seq()
       allMatched.contains(t1DecodePattern.instruction.name)
     }
   }
   case object Brev8 extends Type {
     def apply(t1DecodePattern: T1DecodePattern): Boolean = {
-      val allMatched = if(t1DecodePattern.param.zvbbEnable) Seq(
+      val allMatched = if(isZvbb.y(t1DecodePattern)) Seq(
         "vbrev8.v"
-      )
+      ) else Seq()
       allMatched.contains(t1DecodePattern.instruction.name)
     }
   }
   case object Rev8 extends Type {
     def apply(t1DecodePattern: T1DecodePattern): Boolean = {
-      val allMatched = if(t1DecodePattern.param.zvbbEnable) Seq(
+      val allMatched = if(isZvbb.y(t1DecodePattern)) Seq(
         "vrev8.v"
-      )
+      ) else Seq()
       allMatched.contains(t1DecodePattern.instruction.name)
     }
   }
-  case object NIL extends Type {
+  case object Nil extends Type {
     def apply(t1DecodePattern: T1DecodePattern): Boolean = {
       require(requirement = false, "unreachable")
       false
