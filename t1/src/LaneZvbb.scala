@@ -43,20 +43,10 @@ class LaneZvbb(val parameter: LaneZvbbParam)
   val zvbbBRev8 = VecInit(zvbbSrc(parameter.datapathWidth-1, 0).asBools.grouped(8).map(s => VecInit(s.reverse)).toSeq).asUInt // byte's bit reverse
   val zvbbRev8  = VecInit(zvbbSrc(parameter.datapathWidth-1, 0).asBools.grouped(8).map(s => VecInit(s)).toSeq.reverse).asUInt // element's byte reverse
 
-  val zvbbCLZ = UInt(parameter.datapathWidth.W)
-  for (i <- 0 until parameter.datapathWidth) {
-    when(zvbbSrc(parameter.datapathWidth-i-1) === 1.U) {
-      zvbbCLZ := zvbbCLZ + 1.U
-    }
-  }
-  val zvbbCTZ = UInt(parameter.datapathWidth.W)
-  for (i <- 0 until parameter.datapathWidth) {
-    when(zvbbSrc(i) === 1.U) {
-      zvbbCTZ := zvbbCTZ + 1.U
-    }
-  }
-  val zvbbROL = zvbbSrc.rotateLeft(zvbbRs)
-  val zvbbROR = zvbbSrc.rotateRight(zvbbRs)
+  val zvbbCLZ = (PopCount(scanLeftOr(zvbbBRev)) - 1.U).asUInt
+  val zvbbCTZ = (PopCount(scanRightOr(zvbbBRev)) - 1.U).asUInt
+  val zvbbROL = zvbbSrc.rotateLeft(zvbbRs(4, 0)).asUInt
+  val zvbbROR = zvbbSrc.rotateRight(zvbbRs(4, 0)).asUInt
   response.data := Mux1H(UIntToOH(request.opcode), Seq(
       zvbbBRev,
       zvbbBRev8,
