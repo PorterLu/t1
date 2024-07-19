@@ -4,7 +4,7 @@
 package org.chipsalliance.t1.rtl
 
 import chisel3._
-import chisel3.experimental.hierarchy.{Instance, Instantiate, instantiable, public}
+import chisel3.experimental.hierarchy.{Definition, Instance, Instantiate, instantiable, public}
 import chisel3.experimental.{SerializableModule, SerializableModuleParameter}
 import chisel3.probe.{Probe, ProbeValue, define}
 import chisel3.properties.{AnyClassType, Class, ClassType, Property}
@@ -283,53 +283,67 @@ class T1Probe(param: T1Parameter) extends Bundle {
   val responseCounter: UInt = UInt(param.instructionIndexBits.W)
 }
 
-/** Top of Vector processor:
-  * couple to Rocket Core;
-  * instantiate LSU, Decoder, Lane, CSR, Instruction Queue.
-  * The logic of [[T1]] contains the Vector Sequencer and Mask Unit.
-  */
-class T1(val parameter: T1Parameter) extends Module with SerializableModule[T1Parameter] {
-  val omInstance: Instance[T1OM] = Instantiate(new T1OM)
-  val omType: ClassType = omInstance.toDefinition.getClassType
-  @public
-  val om: Property[ClassType] = IO(Output(Property[omType.Type]()))
-  om := omInstance.getPropertyReference
+class T1Interface(parameter: T1Parameter) extends Bundle
+  // Seq are probes.
+  with IgnoreSeqInBundle {
 
-  omInstance.vlenIn := Property(parameter.vLen)
-  omInstance.dlenIn := Property(parameter.dLen)
+  val clock: Clock = Input(Clock())
+
+  val reset: Bool = Input(Bool())
 
   /** request from CPU.
     * because the interrupt and exception of previous instruction is unpredictable,
     * and the `kill` logic in Vector processor is too high,
     * thus the request should come from commit stage to avoid any interrupt or excepiton.
     */
-  @public
-  val request: DecoupledIO[VRequest] = IO(Flipped(Decoupled(new VRequest(parameter.xLen))))
+  val request: DecoupledIO[VRequest] = Flipped(Decoupled(new VRequest(parameter.xLen)))
+
   /** response to CPU. */
-  @public
-  val response: ValidIO[VResponse] = IO(Valid(new VResponse(parameter.xLen)))
+  val response: ValidIO[VResponse] = Valid(new VResponse(parameter.xLen))
+
   /** CSR interface from CPU. */
-  @public
-  val csrInterface: CSRInterface = IO(Input(new CSRInterface(parameter.laneParam.vlMaxBits)))
+  val csrInterface: CSRInterface = Input(new CSRInterface(parameter.laneParam.vlMaxBits))
   /** from CPU LSU, store buffer is cleared, memory can observe memory requests after this is asserted. */
-  @public
-  val storeBufferClear: Bool = IO(Input(Bool()))
-  @public
-  val highBandwidthLoadStorePort: AXI4RWIrrevocable = IO(new AXI4RWIrrevocable(parameter.axi4BundleParameter))
-  @public
-  val indexedLoadStorePort: AXI4RWIrrevocable = IO(new AXI4RWIrrevocable(parameter.axi4BundleParameter.copy(dataWidth=32)))
-  // TODO: this is an example of adding a new Probe
-  @public
-  val lsuProbe = IO(Probe(new LSUProbe(parameter.lsuParameters)))
-  @public
-  val laneProbes = Seq.tabulate(parameter.laneNumber)(laneIdx => IO(Probe(new LaneProbe(parameter.chainingSize, parameter.instructionIndexBits))).suggestName(s"lane${laneIdx}Probe"))
-  @public
-  val laneVrfProbes = Seq.tabulate(parameter.laneNumber)(laneIdx => IO(Probe(new VRFProbe(
-    parameter.laneParam.vrfParam.regNumBits,
-    parameter.laneParam.vrfOffsetBits,
-    parameter.laneParam.instructionIndexBits,
-    parameter.laneParam.datapathWidth
-  ))).suggestName(s"lane${laneIdx}VrfProbe"))
+
+  val storeBufferClear: Bool = Input(Bool())
+
+  val highBandwidthLoadStorePort: AXI4RWIrrevocable = new AXI4RWIrrevocable(parameter.axi4BundleParameter)
+
+  val indexedLoadStorePort: AXI4RWIrrevocable = new AXI4RWIrrevocable(parameter.axi4BundleParameter.copy(dataWidth=32))
+
+  // OM
+  val om: Property[ClassType] = Output(Property[AnyClassType]())
+
+  // Probe
+  val lsuProbe: LSUProbe = Output(Probe(new LSUProbe(parameter.lsuParameters)))
+
+  val laneProbes: Seq[LaneProbe] = Probe(Vec(parameter.laneNumber, new LaneProbe(parameter.chainingSize, parameter.instructionIndexBits)))
+
+  val laneVrfProbes: Seq[VRFProbe] = Probe(Vec(parameter.laneNumber, new VRFProbe( parameter.laneParam.vrfParam.regNumBits, parameter.laneParam.vrfOffsetBits, parameter.laneParam.instructionIndexBits, parameter.laneParam.datapathWidth)))
+
+  val t1Probe = Output(Probe(new T1Probe(parameter)))
+}
+
+/** Top of Vector processor:
+  * couple to Rocket Core;
+  * instantiate LSU, Decoder, Lane, CSR, Instruction Queue.
+  * The logic of [[T1]] contains the Vector Sequencer and Mask Unit.
+  */
+@instantiable
+class T1(val parameter: T1Parameter)
+  extends FixedIORawModule(new T1Interface(parameter))
+    with SerializableModule[T1Parameter]
+    with ImplicitClock
+    with ImplicitReset {
+  def implicitClock: Clock = io.clock
+  def implicitReset: Reset = io.reset
+
+  val omInstance: Instance[T1OM] = Instantiate(new T1OM)
+  val omType: ClassType = omInstance.toDefinition.getClassType
+  io.om := omInstance.getPropertyReference.asAnyClassType
+
+  omInstance.vlenIn := Property(parameter.vLen)
+  omInstance.dlenIn := Property(parameter.dLen)
 
   /** the LSU Module */
 
@@ -341,12 +355,12 @@ class T1(val parameter: T1Parameter) extends Module with SerializableModule[T1Pa
   // TODO: uarch doc about the order of instructions
   val instructionCounter:     UInt = RegInit(0.U(parameter.instructionIndexBits.W))
   val nextInstructionCounter: UInt = instructionCounter + 1.U
-  when(request.fire) { instructionCounter := nextInstructionCounter }
+  when(io.request.fire) { instructionCounter := nextInstructionCounter }
 
   // todo: handle waw
   val responseCounter:     UInt = RegInit(0.U(parameter.instructionIndexBits.W))
   val nextResponseCounter: UInt = responseCounter + 1.U
-  when(response.fire) { responseCounter := nextResponseCounter }
+  when(io.response.fire) { responseCounter := nextResponseCounter }
 
   // maintained a 1 depth queue for VRequest.
   // TODO: directly maintain a `ready` signal
@@ -356,24 +370,24 @@ class T1(val parameter: T1Parameter) extends Module with SerializableModule[T1Pa
   /** maintain a [[DecoupleIO]] for [[requestReg]]. */
   val requestRegDequeue = Wire(Decoupled(new VRequest(parameter.xLen)))
   // latch instruction, csr, decode result and instruction index to requestReg.
-  when(request.fire) {
+  when(io.request.fire) {
     // The LSU only need to know the instruction, and don't need information from decoder.
     // Thus we latch the request here, and send it to LSU.
-    requestReg.bits.request := request.bits
+    requestReg.bits.request := io.request.bits
     requestReg.bits.decodeResult := decode.decodeResult
-    requestReg.bits.csr := csrInterface
+    requestReg.bits.csr := io.csrInterface
     requestReg.bits.instructionIndex := instructionCounter
     // vd === 0 && not store type
-    requestReg.bits.vdIsV0 := (request.bits.instruction(11, 7) === 0.U) &&
-      (request.bits.instruction(6) || !request.bits.instruction(5))
+    requestReg.bits.vdIsV0 := (io.request.bits.instruction(11, 7) === 0.U) &&
+      (io.request.bits.instruction(6) || !io.request.bits.instruction(5))
     requestReg.bits.writeByte := Mux(
       decode.decodeResult(Decoder.red),
       // Must be smaller than dataPath
       1.U,
       Mux(
         decode.decodeResult(Decoder.maskDestination),
-        (csrInterface.vl >> 3).asUInt + csrInterface.vl(2, 0).orR,
-        csrInterface.vl << (csrInterface.vSew + decode.decodeResult(Decoder.crossWrite))
+        (io.csrInterface.vl >> 3).asUInt + io.csrInterface.vl(2, 0).orR,
+        io.csrInterface.vl << (io.csrInterface.vSew + decode.decodeResult(Decoder.crossWrite))
       )
     )
   }
@@ -381,13 +395,13 @@ class T1(val parameter: T1Parameter) extends Module with SerializableModule[T1Pa
   // 0 1 -> update to false
   // 1 0 -> update to true
   // 1 1 -> don't update
-  requestReg.valid := Mux(request.fire ^ requestRegDequeue.fire, request.fire, requestReg.valid)
+  requestReg.valid := Mux(io.request.fire ^ requestRegDequeue.fire, io.request.fire, requestReg.valid)
   // ready when requestReg is free or it will be free in this cycle.
-  request.ready := !requestReg.valid || requestRegDequeue.ready
+  io.request.ready := !requestReg.valid || requestRegDequeue.ready
   // manually maintain a queue for requestReg.
   requestRegDequeue.bits := requestReg.bits.request
   requestRegDequeue.valid := requestReg.valid
-  decode.decodeInput := request.bits.instruction
+  decode.decodeInput := io.request.bits.instruction
 
   /** alias to [[requestReg.bits.decodeResult]], it is commonly used. */
   val decodeResult: DecodeBundle = requestReg.bits.decodeResult
@@ -626,7 +640,7 @@ class T1(val parameter: T1Parameter) extends Module with SerializableModule[T1Pa
           control.state.wVRFWrite := true.B
         }
 
-        when(responseCounter === control.record.instructionIndex && response.fire) {
+        when(responseCounter === control.record.instructionIndex && io.response.fire) {
           control.state.sCommit := true.B
         }
 
@@ -684,12 +698,12 @@ class T1(val parameter: T1Parameter) extends Module with SerializableModule[T1Pa
       // first type instruction
       val firstLane = ffo(completedVec.asUInt)
       val firstLaneIndex: UInt = OHToUInt(firstLane)(log2Ceil(parameter.laneNumber) - 1, 0)
-      response.bits.rd.valid := lastSlotCommit && decodeResultReg(Decoder.targetRd)
-      response.bits.rd.bits := vd
+      io.response.bits.rd.valid := lastSlotCommit && decodeResultReg(Decoder.targetRd)
+      io.response.bits.rd.bits := vd
       if (parameter.fpuEnable) {
-        response.bits.float := decodeResultReg(Decoder.float)
+        io.response.bits.float := decodeResultReg(Decoder.float)
       } else {
-        response.bits.float := false.B
+        io.response.bits.float := false.B
       }
       when(requestRegDequeue.fire) {
         ffoIndexReg.valid := false.B
@@ -1542,15 +1556,17 @@ class T1(val parameter: T1Parameter) extends Module with SerializableModule[T1Pa
       completedVec(index) := lane.laneResponse.bits.ffoSuccess
       flotReduceValid(index).foreach(d => d := lane.laneResponse.bits.fpReduceValid.get)
     }
-    // TODO: add other probes for lane at here.
-    define(laneProbes(index), lane.probe)
-    define(laneVrfProbes(index), lane.vrfProbe)
     lane
+  }
+
+  laneVec.zipWithIndex.foreach { case (lane, index) =>
+    define(io.laneProbes(index), lane.probe)
+    define(io.laneVrfProbes(index), lane.vrfProbe)
   }
 
   omInstance.lanesIn := Property(laneVec.map(_.om.asAnyClassType))
 
-  define(lsuProbe, lsu._probe)
+  define(io.lsuProbe, lsu._probe)
 
   dataInWritePipeVec := VecInit(laneVec.map(_.writeQueueValid))
 
@@ -1606,8 +1622,8 @@ class T1(val parameter: T1Parameter) extends Module with SerializableModule[T1Pa
     }
   }
 
-  highBandwidthLoadStorePort <> lsu.axi4Port
-  indexedLoadStorePort <> lsu.simpleAccessPorts
+  io.highBandwidthLoadStorePort <> lsu.axi4Port
+  io.indexedLoadStorePort <> lsu.simpleAccessPorts
   // 暂时直接连lsu的写,后续需要处理scheduler的写
   vrfWrite.zip(lsu.vrfWritePort).foreach { case (sink, source) => sink <> source }
 
@@ -1658,10 +1674,10 @@ class T1(val parameter: T1Parameter) extends Module with SerializableModule[T1Pa
         // Ensuring commit order
         inst.record.instructionIndex === responseCounter
     })
-    response.valid := slotCommit.asUInt.orR
-    response.bits.data := Mux(ffoType, ffoIndexReg.bits, dataResult.bits)
-    response.bits.vxsat := DontCare
-    response.bits.mem := (slotCommit.asUInt & VecInit(slots.map(_.record.isLoadStore)).asUInt).orR
+    io.response.valid := slotCommit.asUInt.orR
+    io.response.bits.data := Mux(ffoType, ffoIndexReg.bits, dataResult.bits)
+    io.response.bits.vxsat := DontCare
+    io.response.bits.mem := (slotCommit.asUInt & VecInit(slots.map(_.record.isLoadStore)).asUInt).orR
     lastSlotCommit := slotCommit.last
   }
 
@@ -1688,10 +1704,8 @@ class T1(val parameter: T1Parameter) extends Module with SerializableModule[T1Pa
   /**
     * Probes
     */
-  @public
-  val t1Probe = IO(Output(Probe(new T1Probe(parameter))))
   val probeWire = Wire(new T1Probe(parameter))
-  define(t1Probe, ProbeValue(probeWire))
+  define(io.t1Probe, ProbeValue(probeWire))
   probeWire.instructionCounter := instructionCounter
   probeWire.instructionIssue := requestRegDequeue.fire
   probeWire.issueTag := requestReg.bits.instructionIndex
