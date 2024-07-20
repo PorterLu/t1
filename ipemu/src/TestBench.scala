@@ -37,11 +37,6 @@ class TestBench(generator: SerializableModuleGenerator[T1, T1Parameter]) extends
          |  export "DPI-C" function dump_wave;
          |  function dump_wave(input string file);
          |`ifdef VCS
-         |    $$fsdbDumpfile(file);
-         |    $$fsdbDumpvars("+all");
-         |    $$fsdbDumpSVA();
-         |    $$fsdbDumpvars(0);
-         |    $$fsdbDumpon;
          |`endif
          |`ifdef VERILATOR
          |    $$dumpfile(file);

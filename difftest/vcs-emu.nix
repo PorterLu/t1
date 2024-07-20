@@ -1,5 +1,4 @@
 { lib
-, libspike
 , callPackage
 , elaborateConfig
 
@@ -8,8 +7,9 @@
 , rust-analyzer
 , rust-bindgen
 
-, verilator
-, verilated
+, vcStaticInstallPath
+, vcs-lib
+
 , cmake
 , clang-tools
 }:
@@ -18,7 +18,7 @@ let
   spike_interfaces = callPackage ./spike_interfaces { };
 
   self = rustPlatform.buildRustPackage {
-    name = "difftest";
+    name = "t1-vcs-emu";
     src = with lib.fileset; toSource {
       root = ./.;
       fileset = unions [
@@ -35,22 +35,15 @@ let
 
     buildInputs = [
       spike_interfaces
-      verilated
+      vcs-lib
     ];
 
-    nativeBuildInputs = [
-      verilator
-      cmake
-    ];
-
-    buildFeatures = lib.optionals verilated.enable-trace [ "trace" ];
-    buildAndTestSubdir = "./online_drive";
+    buildFeatures = lib.optionals vcs-lib.enable-trace [ "trace" ];
+    buildAndTestSubdir = "./online_vcs";
 
     env = {
-      VERILATED_INC_DIR = "${verilated}/include";
-      VERILATED_LIB_DIR = "${verilated}/lib";
-      SPIKE_LIB_DIR = "${libspike}/lib";
-      SPIKE_INTERFACES_LIB_DIR = "${spike_interfaces}/lib";
+      VCS_LIB_DIR = "${vcStaticInstallPath}/vcs-mx/linux64/lib";
+      VCS_COMPILED_LIB_DIR = "${vcs-lib}/lib";
       DESIGN_VLEN = elaborateConfig.parameter.vLen;
       DESIGN_DLEN = elaborateConfig.parameter.dLen;
     };
