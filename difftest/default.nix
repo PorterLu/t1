@@ -40,7 +40,7 @@ let
     DESIGN_DLEN = elaborateConfig.parameter.dLen;
   };
 
-  online-dpi-lib = rustPlatform.buildRustPackage {
+  online-vcs = rustPlatform.buildRustPackage {
     name = "online-dpi-lib";
 
     inherit src env;
@@ -84,7 +84,7 @@ let
           clang-tools
         ];
       });
-      inherit spike_interfaces online-dpi-lib;
+      inherit spike_interfaces online-vcs;
     };
   };
 in
