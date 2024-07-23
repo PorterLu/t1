@@ -17,21 +17,45 @@
 let
   spike_interfaces = callPackage ./spike_interfaces { };
 
-  self = rustPlatform.buildRustPackage {
-    name = "difftest";
-    src = with lib.fileset; toSource {
-      root = ./.;
-      fileset = unions [
-        ./spike_rs
-        ./offline
-        ./online_dpi
-        ./online_drive
-        ./online_vcs
-        ./test_common
-        ./Cargo.lock
-        ./Cargo.toml
-      ];
+  src = with lib.fileset; toSource {
+    root = ./.;
+    fileset = unions [
+      ./spike_rs
+      ./offline
+      ./online_dpi
+      ./online_drive
+      ./online_vcs
+      ./test_common
+      ./Cargo.lock
+      ./Cargo.toml
+    ];
+  };
+
+  env = {
+    VERILATED_INC_DIR = "${verilated}/include";
+    VERILATED_LIB_DIR = "${verilated}/lib";
+    SPIKE_LIB_DIR = "${libspike}/lib";
+    SPIKE_INTERFACES_LIB_DIR = "${spike_interfaces}/lib";
+    DESIGN_VLEN = elaborateConfig.parameter.vLen;
+    DESIGN_DLEN = elaborateConfig.parameter.dLen;
+  };
+
+  online-dpi-static-lib = rustPlatform.buildRustPackage {
+    name = "online-dpi-static-lib";
+
+    inherit src env;
+
+    cargoLock = {
+      lockFile = ./Cargo.lock;
     };
+
+    buildFeatures = [ "svvpi" ];
+    buildAndTestSubdir = "./online_dpi";
+  };
+
+  self = rustPlatform.buildRustPackage {
+    name = "verilator-emu" + (lib.optionalString verilated.enable-trace "-trace");
+    inherit src env;
 
     buildInputs = [
       spike_interfaces
@@ -45,15 +69,6 @@ let
 
     buildFeatures = lib.optionals verilated.enable-trace [ "trace" ];
     buildAndTestSubdir = "./online_drive";
-
-    env = {
-      VERILATED_INC_DIR = "${verilated}/include";
-      VERILATED_LIB_DIR = "${verilated}/lib";
-      SPIKE_LIB_DIR = "${libspike}/lib";
-      SPIKE_INTERFACES_LIB_DIR = "${spike_interfaces}/lib";
-      DESIGN_VLEN = elaborateConfig.parameter.vLen;
-      DESIGN_DLEN = elaborateConfig.parameter.dLen;
-    };
 
     cargoLock = {
       lockFile = ./Cargo.lock;
@@ -69,7 +84,7 @@ let
           clang-tools
         ];
       });
-      inherit spike_interfaces;
+      inherit spike_interfaces online-dpi-static-lib;
     };
   };
 in
