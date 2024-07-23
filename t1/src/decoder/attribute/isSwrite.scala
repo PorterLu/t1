@@ -224,5 +224,5 @@ object isSwrite {
 }
 
 case class isSwrite(value: TriState) extends BooleanDecodeAttribute {
-  override val description: String = "sWrite -> targetRd || readOnly || crossWrite || maskDestination || reduce || loadStore instruction will write vd or rd(scalar) from outside of lane. It will request vrf wait, and lane will not write. "
+  override val description: String = "sWrite -> targetRd || readOnly || crossWrite || maskDestination || reduce || loadStore instruction will write vd or rd(scalar) from outside of lane. It will request vrf wait, and lane will not write. No write to vd when isSwrite is True!!!"
 }

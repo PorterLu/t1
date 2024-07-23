@@ -56,6 +56,10 @@ object isCrossread {
       "vwsub.wx",
       "vwsubu.wv",
       "vwsubu.wx",
+      // rv_zvbb
+      "vwsll.vv",
+      "vwsll.vx",
+      "vwsll.vi",
     )
     allMatched.contains(t1DecodePattern.instruction.name)
   }

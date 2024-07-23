@@ -186,6 +186,7 @@ object isVtype {
       "vrol.vv",
       "vror.vv",
       "vwsll.vv",
+      "vwsll.vv",
     )
     allMatched.contains(t1DecodePattern.instruction.name)
   }
