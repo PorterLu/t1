@@ -112,3 +112,72 @@ index a057c62f..152643dc 100644
 -- 
 2.43.0
 
+diff --git a/riscv/mmu.cc b/riscv/mmu.cc
+index d10e23ae..f4c7f68b 100644
+--- a/riscv/mmu.cc
++++ b/riscv/mmu.cc
+@@ -62,7 +62,11 @@ reg_t mmu_t::translate(mem_access_info_t access_info, reg_t len)
+   bool virt = access_info.effective_virt;
+   reg_t mode = (reg_t) access_info.effective_priv;
+ 
++  printf("addr: %x, virt:%x, mode:%x\n", addr, virt, mode);
++
+   reg_t paddr = walk(access_info) | (addr & (PGSIZE-1));
++
++  printf("paddr: %x\n", paddr);
+   if (!pmp_ok(paddr, len, access_info.flags.ss_access ? STORE : type, mode, access_info.flags.hlvx))
+     throw_access_exception(virt, addr, type);
+   return paddr;
+@@ -70,13 +74,16 @@ reg_t mmu_t::translate(mem_access_info_t access_info, reg_t len)
+ 
+ tlb_entry_t mmu_t::fetch_slow_path(reg_t vaddr)
+ {
++  printf("PTW\n");
+   auto access_info = generate_access_info(vaddr, FETCH, {});
+   check_triggers(triggers::OPERATION_EXECUTE, vaddr, access_info.effective_virt);
+ 
+   tlb_entry_t result;
+   reg_t vpn = vaddr >> PGSHIFT;
+   if (unlikely(tlb_insn_tag[vpn % TLB_ENTRIES] != (vpn | TLB_CHECK_TRIGGERS))) {
++    printf("vpn: %x\n", vpn);
+     reg_t paddr = translate(access_info, sizeof(fetch_temp));
++    printf("translate over, paddr: %x\n", paddr);
+     if (auto host_addr = sim->addr_to_mem(paddr)) {
+       result = refill_tlb(vaddr, paddr, host_addr, FETCH);
+     } else {
+@@ -593,6 +600,8 @@ reg_t mmu_t::walk(mem_access_info_t access_info)
+     }
+   }
+ 
++
++  printf("%x\n", type);
+   switch (type) {
+     case FETCH: throw trap_instruction_page_fault(virt, addr, 0, 0);
+     case LOAD: throw trap_load_page_fault(virt, addr, 0, 0);
+diff --git a/riscv/mmu.h b/riscv/mmu.h
+index 3e4ae9a7..c6383eaa 100644
+--- a/riscv/mmu.h
++++ b/riscv/mmu.h
+@@ -308,7 +308,10 @@ public:
+     if (matched_trigger)
+       throw *matched_trigger;
+ 
++    printf("TLB Translate Addr: %x\n", addr);
+     auto tlb_entry = translate_insn_addr(addr);
++    printf("TLB Translate Over\n");
++
+     insn_bits_t insn = from_le(*(uint16_t*)(tlb_entry.host_offset + addr));
+     int length = insn_length(insn);
+ 
+diff --git a/riscv/trap.h b/riscv/trap.h
+index 5eb62cfd..7004f87a 100644
+--- a/riscv/trap.h
++++ b/riscv/trap.h
+@@ -91,6 +91,7 @@ class mem_trap_t : public trap_t
+ #define DECLARE_MEM_TRAP(n, x) class trap_##x : public mem_trap_t { \
+  public: \
+   trap_##x(bool gva, reg_t tval, reg_t tval2, reg_t tinst) : mem_trap_t(n, gva, tval, tval2, tinst) {} \
++  printf("%s\n", "trap_"#x); \
+   std::string name() { return "trap_"#x; } \
+ };
+

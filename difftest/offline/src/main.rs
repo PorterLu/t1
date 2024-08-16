@@ -35,6 +35,7 @@ fn main() -> anyhow::Result<()> {
   let args = CommonArgs::parse();
 
   args.setup_logger()?;
+  printf("Test Log\n");
 
   // if there is no log file, just run spike and quit
   if args.log_file.is_none() {

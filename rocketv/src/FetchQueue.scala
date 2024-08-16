@@ -53,21 +53,28 @@ class FetchQueue(val parameter: FetchQueueParameter)
   override protected def implicitClock: Clock = io.clock
   override protected def implicitReset: Reset = io.reset
 
+  /* Queue Structure:
+  *  | (v_0, entry_0) | (v_1, entry_1) | ... | (v_n, entry_n) |
+  *        ^                                          ^
+  *        |                                          |
+  *       Deq                                        Enq
+  */
   private val valid = RegInit(VecInit(Seq.fill(parameter.entries) { false.B }))
-  private val elts = Reg(Vec(parameter.entries, parameter.gen))
+  private val fetch_entry = Reg(Vec(parameter.entries, parameter.gen))
 
+  /* Move entry_(n+1) -> entry_n, and enqueue the last entry. (The valid entry will be contingous.)*/
   for (i <- 0 until parameter.entries) {
     def paddedValid(i: Int) = if (i == -1) true.B else if (i == parameter.entries) false.B else valid(i)
 
     val flow = true
-    val wdata = if (i == parameter.entries - 1) io.enq.bits else Mux(valid(i + 1), elts(i + 1), io.enq.bits)
+    val wdata = if (i == parameter.entries - 1) io.enq.bits else Mux(valid(i + 1), fetch_entry(i + 1), io.enq.bits)
     val wen =
       Mux(
         io.deq.ready,
         paddedValid(i + 1) || io.enq.fire && valid(i),
         io.enq.fire && paddedValid(i - 1) && !valid(i)
       )
-    when(wen) { elts(i) := wdata }
+    when(wen) { fetch_entry(i) := wdata }
 
     valid(i) :=
       Mux(
@@ -79,8 +86,9 @@ class FetchQueue(val parameter: FetchQueueParameter)
 
   io.enq.ready := !valid(parameter.entries - 1)
   io.deq.valid := valid(0)
-  io.deq.bits := elts.head
+  io.deq.bits := fetch_entry.head
 
+  /* Dequeue the instruction that just enqueue */
   when(io.enq.valid) { io.deq.valid := true.B }
   when(!valid(0)) { io.deq.bits := io.enq.bits }
 

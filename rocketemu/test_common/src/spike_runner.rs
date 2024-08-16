@@ -4,6 +4,7 @@ use tracing::debug;
 use spike_rs::spike_event::SpikeEvent;
 use spike_rs::util::load_elf;
 use spike_rs::Spike;
+use tracing::info;
 
 use crate::CommonArgs;
 
@@ -31,6 +32,8 @@ impl SpikeRunner {
 
     let entry_addr = load_elf(&mut spike, Path::new(&args.elf_file)).unwrap();
 
+    info!("{:x}", entry_addr);
+
     // initialize processor
     let proc = spike.get_proc();
     let state = proc.get_state();
@@ -54,15 +57,23 @@ impl SpikeRunner {
   // just execute one instruction for non-difftest
   pub fn exec(&self) -> anyhow::Result<()> {
     let spike = &self.spike;
+    info!("enter exec\n");
     let proc = spike.get_proc();
     let state = proc.get_state();
 
+    info!("get proc, state\n");
+    for i in 0..31 {
+      info!("{:x}", state.get_reg(i, false));
+    }
     let new_pc = proc.func();
 
+    info!("new_pc: {:x}", new_pc);
     state.handle_pc(new_pc).unwrap();
 
+    info!("handle pc over\n");
     let ret = state.exit();
 
+    info!("state exit\n");
     if ret == 0 {
       return Err(anyhow::anyhow!("simulation finished!"));
     }

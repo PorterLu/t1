@@ -27,6 +27,8 @@ fn run_spike(args: &mut CommonArgs) -> anyhow::Result<()> {
         return Ok(());
       }
     };
+
+    info!("exec inst over\n");
   }
 }
 

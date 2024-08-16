@@ -1374,6 +1374,7 @@ class CSR(val parameter: CSRParameter)
     UIntToOH(io.rw.addr(log2Ceil(CSR.nCtr + nPerfCounters) - 1, 0)),
     0.U
   )
+
   when(csr_wen) {
     val scause_mask = ((BigInt(1) << (xLen - 1)) + 31).U /* only implement 5 LSBs and MSB */
 
