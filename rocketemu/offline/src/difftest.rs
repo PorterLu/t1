@@ -3,6 +3,7 @@ use std::path::Path;
 
 use common::rtl_config::RTLConfig;
 use common::CommonArgs;
+use tracing::debug;
 
 use crate::dut::Dut;
 use crate::json_events::*;

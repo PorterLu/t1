@@ -59,6 +59,8 @@ impl SpikeRunner {
 
     let new_pc = proc.func();
     
+    info!("{:x}\n", new_pc);
+
     state.handle_pc(new_pc).unwrap();
 
     let ret = state.exit();
@@ -85,6 +87,9 @@ impl SpikeRunner {
     // inst is scalar
     debug!("SpikeStep: spike run scalar insn ({})", event.describe_insn());
     let new_pc = proc.func();
+
+    info!("{:x}\n", new_pc);
+
     event.log_mem_write(spike).unwrap();
     event.log_reg_write(spike).unwrap();
 
