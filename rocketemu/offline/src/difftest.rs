@@ -3,7 +3,7 @@ use std::path::Path;
 
 use common::rtl_config::RTLConfig;
 use common::CommonArgs;
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::dut::Dut;
 use crate::json_events::*;
@@ -36,6 +36,8 @@ impl Difftest {
       }
       if se.is_rd_written() && se.rd_idx != 0 {
         let event = self.dut.step()?;
+        
+        event.
 
         match event {
           JsonEvents::RegWrite { addr, data, cycle } => {
